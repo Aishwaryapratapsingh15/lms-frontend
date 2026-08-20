@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "LMS",
-  description: "Lead Management System",
+  title: "EICE LeadFlow",
+  description: "Lead management and sales operations workspace",
 };
 
 export default function RootLayout({ children }) {

@@ -10,6 +10,7 @@ import StatusBadge from "@/components/StatusBadge";
 import PriorityBadge from "@/components/PriorityBadge";
 import Modal from "@/components/Modal";
 import LeadForm from "@/components/forms/LeadForm";
+import Icon from "@/components/Icons";
 
 function assignedLabel(lead, salesUsers) {
   if (lead.assignedTo?.name) return lead.assignedTo.name;
@@ -48,13 +49,12 @@ export default function LeadsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- standard fetch-on-mount; leads/loading/error aren't effect deps, so no cascade
+    // Data is fetched asynchronously; loading state is intentionally reset per access scope.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasFullAccess]);
 
-  // Defensive client-side filter — kept even though the backend likely
-  // already scopes /leads by role, in case it doesn't.
   const visibleLeads = hasFullAccess ? leads : leads.filter((l) => belongsToUser(l, user?.id));
 
   async function handleCreate(payload) {
@@ -64,56 +64,72 @@ export default function LeadsPage() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Leads</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-        >
-          New lead
-        </button>
+    <div className="space-y-5">
+      <header>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-[28px]">Leads</h1>
+            <p className="mt-1 text-sm text-slate-500">Track, qualify and move opportunities through your pipeline.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              <Icon name="plus" size={16} /> New lead
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--shadow-soft)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs"><Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input placeholder="Search leads..." className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100"/></div>
+        <div className="flex items-center gap-2"><select className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 outline-none"><option>All statuses</option></select><select className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-600 outline-none"><option>All priorities</option></select><span className="whitespace-nowrap px-2 text-xs font-medium text-slate-500">{visibleLeads.length} records</span></div>
       </div>
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+
       {loading ? (
-        <p className="text-sm text-slate-400">Loading…</p>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-400 shadow-sm">
+          Loading leads…
+        </div>
       ) : visibleLeads.length === 0 ? (
-        <p className="text-sm text-slate-400">No leads yet.</p>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+          No leads yet. Start by creating your first opportunity.
+        </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Priority</th>
-                {hasFullAccess && <th className="px-4 py-3">Assigned to</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {visibleLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/leads/${lead.id}`} className="font-medium text-indigo-600 hover:underline">
-                      {lead.fullName}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{lead.company || "—"}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={lead.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <PriorityBadge priority={lead.priority} />
-                  </td>
-                  {hasFullAccess && (
-                    <td className="px-4 py-3 text-slate-600">{assignedLabel(lead, salesUsers)}</td>
-                  )}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-soft)]">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50/80 text-[10px] uppercase tracking-[0.1em] text-slate-500">
+                <tr>
+                  <th className="px-5 py-3.5 font-semibold">Lead</th>
+                  <th className="px-5 py-4 font-semibold">Company</th>
+                  <th className="px-5 py-4 font-semibold">Status</th>
+                  <th className="px-5 py-4 font-semibold">Priority</th>
+                  {hasFullAccess && <th className="px-5 py-4 font-semibold">Assigned to</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {visibleLeads.map((lead) => (
+                  <tr key={lead.id} className="group transition hover:bg-blue-50/30">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[11px] font-semibold text-slate-600">{lead.fullName?.slice(0,1)?.toUpperCase()}</div><div><Link href={`/leads/${lead.id}`} className="font-semibold text-slate-800 hover:text-blue-600">{lead.fullName}</Link><p className="mt-0.5 text-[11px] text-slate-400">{lead.email || "No email"}</p></div></div>
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">{lead.company || "—"}</td>
+                    <td className="px-5 py-4">
+                      <StatusBadge status={lead.status} />
+                    </td>
+                    <td className="px-5 py-4">
+                      <PriorityBadge priority={lead.priority} />
+                    </td>
+                    {hasFullAccess && <td className="px-5 py-4 text-slate-600">{assignedLabel(lead, salesUsers)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

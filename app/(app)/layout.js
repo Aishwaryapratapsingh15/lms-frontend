@@ -6,10 +6,6 @@ import { useAuth } from "@/lib/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 
-// Client-side auth guard. Route-protection at the Next.js middleware level
-// would need to inspect the refresh-token cookie, but its name/shape isn't
-// documented by the backend — this guard is the safe option until that's
-// confirmed.
 export default function AppLayout({ children }) {
   const { status } = useAuth();
   const router = useRouter();
@@ -20,18 +16,20 @@ export default function AppLayout({ children }) {
 
   if (status !== "authenticated") {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-slate-400">
-        Loading…
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Loading your workspace…
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-1">
+    <div className="min-h-screen bg-[#f6f8fb] text-slate-900">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col lg:pl-[248px]">
         <Topbar />
-        <main className="flex-1 bg-slate-50 p-6">{children}</main>
+        <main className="flex-1 px-4 py-5 pb-24 md:px-7 md:py-7 lg:pb-8">
+          <div className="mx-auto max-w-[1440px]">{children}</div>
+        </main>
       </div>
     </div>
   );

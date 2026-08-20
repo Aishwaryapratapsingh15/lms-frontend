@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const FIELD_CLASS =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100";
 
 export default function EmailForm({ defaultToEmail, onSubmit }) {
   const [toEmail, setToEmail] = useState(defaultToEmail || "");
@@ -64,7 +64,7 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
       <button
         type="submit"
         disabled={submitting}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+        className="rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
       >
         {submitting ? "Sending…" : "Send email"}
       </button>
