@@ -1,30 +1,46 @@
-FROM node:22-alpine AS dependencies
+# syntax=docker/dockerfile:1
 
+FROM node:20-alpine AS base
+
+# ---------- 1. Install dependencies ----------
+FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM dependencies AS builder
-
-ARG NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+# ---------- 2. Build the app ----------
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# NEXT_PUBLIC_* vars are inlined into the client bundle at build time,
+# so they must be passed as build args, not just runtime env vars.
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN npm run build
 
-FROM node:22-alpine AS runner
-
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+# ---------- 3. Run the app ----------
+FROM base AS runner
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-COPY --from=builder /app/.next ./.next
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3014
+ENV HOSTNAME=0.0.0.0
+
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
+
+# output: 'standalone' (next.config.mjs) traces only the files needed at runtime
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.mjs ./next.config.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-USER node
-EXPOSE 3000
+USER nextjs
 
-CMD ["npm", "run", "start"]
+EXPOSE 3014
+
+CMD ["node", "server.js"]
