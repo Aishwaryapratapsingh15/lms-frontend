@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import Icon from "@/components/Icons";
 
@@ -29,7 +30,7 @@ export default function LoginPage() {
         <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Welcome back</p><h2 className="mt-2 text-[30px] font-semibold tracking-tight text-slate-950">Sign in to your account</h2><p className="mt-2 text-sm text-slate-500">Enter your credentials to access your workspace.</p></div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div><label htmlFor="email" className="mb-2 block text-xs font-semibold text-slate-700">Email address</label><div className="relative"><Icon name="mail" size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/><input id="email" type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="you@company.com"/></div></div>
-          <div><div className="mb-2 flex items-center justify-between"><label htmlFor="password" className="text-xs font-semibold text-slate-700">Password</label><button type="button" className="text-[11px] font-semibold text-blue-600 hover:text-blue-700">Forgot password?</button></div><input id="password" type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="Enter your password"/></div>
+          <div><div className="mb-2 flex items-center justify-between"><label htmlFor="password" className="text-xs font-semibold text-slate-700">Password</label><Link href="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:text-blue-700">Forgot password?</Link></div><input id="password" type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="Enter your password"/></div>
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
           <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-blue-600"/>Remember me on this device</label>
           <button type="submit" disabled={submitting} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60">{submitting ? "Signing in…" : "Sign in"}{!submitting && <Icon name="arrowRight" size={16}/>}</button>

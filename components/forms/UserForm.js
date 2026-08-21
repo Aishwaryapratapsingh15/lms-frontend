@@ -6,7 +6,7 @@ import { ROLES, ROLE_LABELS } from "@/lib/constants";
 const FIELD_CLASS =
   "h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100";
 
-export default function UserForm({ onSubmit, onCancel }) {
+export default function UserForm({ onSubmit, onCancel, allowedRoles = Object.values(ROLES) }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: ROLES.SALES });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +53,7 @@ export default function UserForm({ onSubmit, onCancel }) {
         <label className="mb-1 block text-sm font-medium text-slate-700">Password *</label>
         <input
           required
+          minLength={12}
           type="password"
           className={FIELD_CLASS}
           value={form.password}
@@ -66,7 +67,7 @@ export default function UserForm({ onSubmit, onCancel }) {
           value={form.role}
           onChange={(e) => update("role", e.target.value)}
         >
-          {Object.values(ROLES).map((r) => (
+          {allowedRoles.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>

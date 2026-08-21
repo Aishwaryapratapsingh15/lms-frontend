@@ -1,200 +1,61 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { getLead, updateLeadStatus, assignLead, addFollowUp } from "@/lib/api/leads";
+import { addFollowUp, archiveLead, assignLead, getLead, getLeadTimeline, restoreLead, updateLead, updateLeadStatus } from "@/lib/api/leads";
 import { sendLeadEmail } from "@/lib/api/emails";
 import { listUsers } from "@/lib/api/users";
-import { LEAD_STATUSES, ROLES } from "@/lib/constants";
+import { LEAD_STATUS_LABELS, LEAD_STATUSES, ROLES } from "@/lib/constants";
 import StatusBadge from "@/components/StatusBadge";
 import PriorityBadge from "@/components/PriorityBadge";
 import FollowUpForm from "@/components/forms/FollowUpForm";
 import EmailForm from "@/components/forms/EmailForm";
-import Icon from "@/components/Icons";
+import LeadForm from "@/components/forms/LeadForm";
+import Modal from "@/components/Modal";
+
+const ACTIVITY_LABELS = { CREATED: "Lead created", UPDATED: "Lead updated", ASSIGNED: "Lead assigned", STATUS_CHANGED: "Status changed", FOLLOW_UP_ADDED: "Follow-up added", FOLLOW_UP_COMPLETED: "Follow-up completed", EMAIL_SENT: "Email sent", ARCHIVED: "Lead archived", RESTORED: "Lead restored" };
+const archived = (lead) => Boolean(lead?.archivedAt ?? lead?.isArchived ?? lead?.archived);
 
 export default function LeadDetailPage({ params }) {
   const { id } = use(params);
+  const router = useRouter();
   const { user, hasFullAccess } = useAuth();
   const [lead, setLead] = useState(null);
+  const [timeline, setTimeline] = useState([]);
   const [salesUsers, setSalesUsers] = useState([]);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
+    setError("");
     try {
-      const [leadData, userData] = await Promise.all([
-        getLead(id),
-        hasFullAccess ? listUsers() : Promise.resolve([]),
-      ]);
+      const [leadData, timelineData, userData] = await Promise.all([getLead(id), getLeadTimeline(id), hasFullAccess ? listUsers() : Promise.resolve([])]);
       setLead(leadData);
+      setTimeline(Array.isArray(timelineData) ? timelineData : timelineData?.data ?? timelineData?.timeline ?? []);
       setSalesUsers(userData.filter((u) => u.role === ROLES.SALES));
-    } catch (err) {
-      setError(err.message || "Failed to load lead");
-    }
-  }
-
+    } catch (err) { setError(err.status === 404 ? "This lead was not found or is not accessible to you." : err.status === 403 ? "You do not have permission to access this lead." : err.message || "Failed to load lead"); }
+  }, [id, hasFullAccess]);
   useEffect(() => {
-    // Data is fetched asynchronously whenever the selected lead or access scope changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, hasFullAccess]);
+  }, [load]);
 
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
+  async function mutate(action) { try { await action(); await load(); } catch (err) { setError(err.message || "Could not update lead"); } }
+  if (error && !lead) return <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}<button onClick={() => router.push("/leads")} className="ml-3 font-semibold underline">Back to leads</button></div>;
   if (!lead) return <p className="text-sm text-slate-400">Loading lead…</p>;
-
   const followUps = lead.followUps ?? [];
   const emailLogs = lead.emailLogs ?? [];
 
-  async function handleStatusChange(status) {
-    const updated = await updateLeadStatus(id, status);
-    setLead((prev) => ({ ...prev, ...updated }));
-  }
-
-  async function handleAssign(assignedToId) {
-    const updated = await assignLead(id, assignedToId);
-    setLead((prev) => ({ ...prev, ...updated }));
-  }
-
-  async function handleAddFollowUp(payload) {
-    await addFollowUp({ ...payload, leadId: id, userId: user?.id });
-    load();
-  }
-
-  async function handleSendEmail(payload) {
-    await sendLeadEmail({ ...payload, leadId: id, userId: user?.id });
-    load();
-  }
-
-  return (
-    <div className="space-y-5">
-      <header>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Leads / Lead profile</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 md:text-[28px]">{lead.fullName}</h1>
-            <p className="mt-1 text-sm text-slate-500">{lead.company || "Individual lead"} · {lead.email || "No email provided"}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={lead.status} />
-            <PriorityBadge priority={lead.priority} />
-          </div>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.65fr_0.9fr]">
-        <div className="space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6">
-            <div className="flex items-center gap-2"><Icon name="leads" size={17} className="text-blue-600"/><h2 className="text-sm font-semibold text-slate-900">Contact overview</h2></div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Email</p>
-                <p className="mt-2 text-sm font-medium text-slate-800">{lead.email || "—"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Phone</p>
-                <p className="mt-2 text-sm font-medium text-slate-800">{lead.phone || "—"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Company</p>
-                <p className="mt-2 text-sm font-medium text-slate-800">{lead.company || "—"}</p>
-              </div>
-              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Source</p>
-                <p className="mt-2 text-sm font-medium text-slate-800">{lead.source || "—"}</p>
-              </div>
-            </div>
-
-            {lead.notes && (
-              <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Notes</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{lead.notes}</p>
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6">
-            <div className="flex items-center gap-2"><Icon name="calendar" size={17} className="text-blue-600"/><h2 className="text-sm font-semibold text-slate-900">Follow-ups</h2></div>
-            {followUps.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-400">No follow-ups yet.</p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {followUps.map((f) => (
-                  <li key={f.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-semibold text-slate-800">{f.type}</span>
-                      <span className="text-slate-500">{f.createdAt ? new Date(f.createdAt).toLocaleString() : ""}</span>
-                    </div>
-                    <p className="mt-2 text-slate-500">by {f.user?.name ?? f.user?.email ?? "—"}</p>
-                    <p className="mt-2 text-slate-700">{f.notes}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-5">
-              <FollowUpForm onSubmit={handleAddFollowUp} />
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6">
-            <div className="flex items-center gap-2"><Icon name="mail" size={17} className="text-blue-600"/><h2 className="text-sm font-semibold text-slate-900">Emails</h2></div>
-            {emailLogs.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-400">No emails sent yet.</p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {emailLogs.map((e) => (
-                  <li key={e.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="font-semibold text-slate-800">{e.subject}</span>
-                      <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-slate-700">
-                        {e.status}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-slate-500">to {e.toEmail}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-5">
-              <EmailForm defaultToEmail={lead.email} onSubmit={handleSendEmail} />
-            </div>
-          </section>
-        </div>
-
-        <aside className="space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6">
-            <h2 className="text-sm font-semibold text-slate-900">Pipeline status</h2>
-            <select
-              className="mt-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100"
-              value={lead.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-            >
-              {LEAD_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </section>
-
-          {hasFullAccess && (
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6">
-              <h2 className="text-sm font-semibold text-slate-900">Lead owner</h2>
-              <select
-                className="mt-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100"
-                value={lead.assignedTo?.id ?? lead.assignedToId ?? ""}
-                onChange={(e) => handleAssign(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {salesUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name ?? u.email}
-                  </option>
-                ))}
-              </select>
-            </section>
-          )}
-        </aside>
-      </div>
-    </div>
-  );
+  return <div className="space-y-5">
+    <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><p className="text-xs font-medium text-slate-500">Leads / Lead profile</p><h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 md:text-[28px]">{lead.fullName}</h1><p className="mt-1 text-sm text-slate-500">{lead.company || "Individual lead"} · {lead.email || "No email provided"}</p></div><div className="flex flex-wrap items-center gap-2"><StatusBadge status={lead.status}/><PriorityBadge priority={lead.priority}/>{archived(lead) && <span className="rounded bg-slate-200 px-2 py-1 text-[10px] font-semibold uppercase text-slate-600">Archived</span>}<button onClick={() => setEditing(true)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold">Edit</button>{hasFullAccess && <button onClick={() => mutate(() => archived(lead) ? restoreLead(id) : archiveLead(id))} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-blue-600">{archived(lead) ? "Restore" : "Archive"}</button>}</div></header>
+    {error && <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.65fr_0.9fr]"><div className="space-y-6">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"><h2 className="text-sm font-semibold text-slate-900">Contact overview</h2><div className="mt-5 grid gap-4 sm:grid-cols-2">{[["Email",lead.email],["Phone",lead.phone],["Company",lead.company],["Source",lead.source]].map(([label,value]) => <div key={label} className="rounded-lg border border-slate-100 bg-slate-50 p-4"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p><p className="mt-2 text-sm font-medium text-slate-800">{value || "—"}</p></div>)}</div>{lead.notes && <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Notes</p><p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{lead.notes}</p></div>}</section>
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"><h2 className="text-sm font-semibold text-slate-900">Activity timeline</h2>{timeline.length === 0 ? <p className="mt-4 text-sm text-slate-400">No activity recorded yet.</p> : <ol className="mt-5 space-y-4 border-l border-slate-200 pl-5">{timeline.map((item, index) => <li key={item.id ?? `${item.createdAt}-${index}`} className="relative"><span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-blue-500 ring-4 ring-white"/><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-semibold text-slate-800">{ACTIVITY_LABELS[item.type] ?? item.type}</p><time className="text-[11px] text-slate-400">{new Date(item.createdAt).toLocaleString()}</time></div>{item.actor && <p className="mt-1 text-xs text-slate-500">by {item.actor.name ?? item.actor.email}</p>}{item.details && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">{typeof item.details === "string" ? item.details : JSON.stringify(item.details)}</p>}</li>)}</ol>}</section>
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"><h2 className="text-sm font-semibold text-slate-900">Follow-ups</h2>{followUps.length === 0 ? <p className="mt-4 text-sm text-slate-400">No follow-ups yet.</p> : <ul className="mt-4 space-y-3">{followUps.map((f) => <li key={f.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm"><div className="flex justify-between"><b>{f.type}</b><span className="text-slate-500">{f.nextFollowUpAt ? new Date(f.nextFollowUpAt).toLocaleString() : ""}</span></div><p className="mt-2 text-slate-700">{f.notes}</p></li>)}</ul>}<div className="mt-5"><FollowUpForm onSubmit={async (payload) => { await addFollowUp({ ...payload, leadId: id }); await load(); }}/></div></section>
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-soft)] md:p-6"><h2 className="text-sm font-semibold text-slate-900">Emails</h2>{emailLogs.length === 0 ? <p className="mt-4 text-sm text-slate-400">No emails sent yet.</p> : <ul className="mt-4 space-y-3">{emailLogs.map((e) => <li key={e.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm"><b>{e.subject}</b><p className="mt-1 text-slate-500">to {e.toEmail}</p></li>)}</ul>}<div className="mt-5"><EmailForm defaultToEmail={lead.email} onSubmit={async (payload) => { await sendLeadEmail({ ...payload, leadId: id, userId: user?.id }); await load(); }}/></div></section>
+    </div><aside className="space-y-6"><section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-sm font-semibold">Pipeline status</h2><select className="mt-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" value={lead.status} onChange={(e) => mutate(() => updateLeadStatus(id, e.target.value))}>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s] ?? s}</option>)}</select></section>{hasFullAccess && <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-sm font-semibold">Lead owner</h2><select className="mt-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" value={lead.assignedTo?.id ?? lead.assignedToId ?? ""} onChange={(e) => mutate(() => assignLead(id, e.target.value))}><option value="">Unassigned</option>{salesUsers.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}</select></section>}</aside></div>
+    {editing && <Modal title="Edit lead" onClose={() => setEditing(false)}><LeadForm initialValues={lead} onSubmit={async (payload) => { await updateLead(id, payload); setEditing(false); await load(); }} onCancel={() => setEditing(false)}/></Modal>}
+  </div>;
 }

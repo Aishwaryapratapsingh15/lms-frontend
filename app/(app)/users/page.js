@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { listUsers, createUser } from "@/lib/api/users";
-import { ROLE_LABELS } from "@/lib/constants";
+import { ROLE_LABELS, ROLES } from "@/lib/constants";
 import Modal from "@/components/Modal";
 import UserForm from "@/components/forms/UserForm";
 import Icon from "@/components/Icons";
 
 export default function UsersPage() {
-  const { hasFullAccess } = useAuth();
+  const { hasFullAccess, user } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,7 @@ export default function UsersPage() {
 
       {showForm && (
         <Modal title="New user" onClose={() => setShowForm(false)}>
-          <UserForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+          <UserForm allowedRoles={user?.role === ROLES.SUPER_ADMIN ? Object.values(ROLES) : [ROLES.SALES]} onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
         </Modal>
       )}
     </div>
