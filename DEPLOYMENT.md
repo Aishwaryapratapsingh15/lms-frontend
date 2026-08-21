@@ -16,7 +16,7 @@ git pull            # or: git clone <repo-url> /var/www/lms-frontend
 Create `/var/www/lms-frontend/.env` (not committed to git):
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=https://api.leadflow.eicetechnology.com
+NEXT_PUBLIC_API_BASE_URL=https://leadflowapi.eicetechnology.com
 ```
 
 `NEXT_PUBLIC_*` vars are baked into the client bundle at **build time**, so any
