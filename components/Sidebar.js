@@ -9,6 +9,7 @@ export const LINKS = [
   { href: "/dashboard", label: "Overview", icon: "dashboard" },
   { href: "/leads", label: "Leads", icon: "leads" },
   { href: "/reminders", label: "Reminders", icon: "calendar" },
+  { href: "/calendar", label: "Team calendar", icon: "calendar" },
   { href: "/form-submissions", label: "General enquiries", icon: "mail", fullAccessOnly: true },
   { href: "/users", label: "Team members", icon: "users", fullAccessOnly: true },
   { href: "/settings", label: "Security", icon: "target" },
