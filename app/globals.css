@@ -1,16 +1,58 @@
 @import "tailwindcss";
 
+/* EICE brand palette — matches the main marketing website (see
+   eice main website code React frontend/src/index.css and fontCss.css).
+   #012060 is the site's own "dark blue button" anchor; #dc3545/#28a745
+   are its Bootstrap-style danger/success reds & greens. */
+@theme {
+  --color-blue-50: #f0f5ff;
+  --color-blue-100: #dbe7ff;
+  --color-blue-200: #adc5fb;
+  --color-blue-300: #769ef4;
+  --color-blue-400: #2566f4;
+  --color-blue-500: #053db8;
+  --color-blue-600: #012060;
+  --color-blue-700: #001a4c;
+  --color-blue-800: #001238;
+  --color-blue-900: #000c29;
+  --color-blue-950: #000719;
+
+  --color-red-50: #fdf2f3;
+  --color-red-100: #fae1e3;
+  --color-red-200: #f4bec3;
+  --color-red-300: #ea99a1;
+  --color-red-400: #e46a76;
+  --color-red-500: #e04d5c;
+  --color-red-600: #dc3545;
+  --color-red-700: #c32232;
+  --color-red-800: #a11c29;
+  --color-red-900: #841923;
+  --color-red-950: #480a10;
+
+  --color-emerald-50: #f3fcf5;
+  --color-emerald-100: #e2f8e7;
+  --color-emerald-200: #b9edc4;
+  --color-emerald-300: #8be09d;
+  --color-emerald-400: #54cd6e;
+  --color-emerald-500: #34b74f;
+  --color-emerald-600: #28a745;
+  --color-emerald-700: #218739;
+  --color-emerald-800: #1c6b2f;
+  --color-emerald-900: #175828;
+  --color-emerald-950: #0a3014;
+}
+
 :root {
   --background: #f6f8fb;
   --foreground: #172033;
   --panel: #ffffff;
   --panel-border: #e7eaf0;
   --shadow-soft: 0 1px 2px rgba(16, 24, 40, 0.03), 0 8px 24px rgba(16, 24, 40, 0.04);
-  --primary: #2563eb;
-  --primary-soft: #eff6ff;
-  --success: #16a34a;
+  --primary: #012060;
+  --primary-soft: #f0f5ff;
+  --success: #28a745;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  --danger: #dc3545;
 }
 
 @theme inline {
@@ -46,7 +88,7 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
-::selection { background: #dbeafe; color: #1e3a8a; }
+::selection { background: #dbe7ff; color: #001a4c; }
 
 ::-webkit-scrollbar {
   width: 10px;
