@@ -5,8 +5,16 @@ import { useState } from "react";
 const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100";
 
+const parseEmails = (value) =>
+  value
+    .split(",")
+    .map((email) => email.trim())
+    .filter(Boolean);
+
 export default function EmailForm({ defaultToEmail, onSubmit }) {
   const [toEmail, setToEmail] = useState(defaultToEmail || "");
+  const [ccEmails, setCcEmails] = useState("");
+  const [bccEmails, setBccEmails] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
@@ -17,9 +25,17 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
     setError("");
     setSubmitting(true);
     try {
-      await onSubmit({ toEmail, subject, body });
+      await onSubmit({
+        toEmail,
+        ccEmails: parseEmails(ccEmails),
+        bccEmails: parseEmails(bccEmails),
+        subject,
+        body,
+      });
       setSubject("");
       setBody("");
+      setCcEmails("");
+      setBccEmails("");
     } catch (err) {
       setError(err.message || "Failed to send email");
     } finally {
@@ -38,6 +54,28 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
           value={toEmail}
           onChange={(e) => setToEmail(e.target.value)}
         />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">CC</label>
+          <input
+            type="text"
+            placeholder="comma-separated emails"
+            className={FIELD_CLASS}
+            value={ccEmails}
+            onChange={(e) => setCcEmails(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">BCC</label>
+          <input
+            type="text"
+            placeholder="comma-separated emails"
+            className={FIELD_CLASS}
+            value={bccEmails}
+            onChange={(e) => setBccEmails(e.target.value)}
+          />
+        </div>
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Subject *</label>
