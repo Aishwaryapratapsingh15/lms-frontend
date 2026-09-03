@@ -36,17 +36,22 @@ const ageRange = (age) => {
   if (age === "old") return { createdFrom: "", createdTo: dayOffset(8) };
   return { createdFrom: "", createdTo: "" };
 };
+const dateBoundaryIso = (dateValue, endOfDay = false) => {
+  if (!dateValue) return "";
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const date = new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date.toISOString();
+};
+const calendarDayIndex = (date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000;
 const leadAge = (createdAt) => {
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) return null;
-  created.setHours(0, 0, 0, 0);
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.max(0, Math.floor((today - created) / 86_400_000));
+  const days = Math.max(0, calendarDayIndex(today) - calendarDayIndex(created));
   if (days === 0) return { label: "New", className: "bg-emerald-50 text-emerald-700" };
-  if (days <= 3) return { label: "3 days", className: "bg-blue-50 text-blue-700" };
-  if (days <= 7) return { label: "7 days", className: "bg-amber-50 text-amber-700" };
-  return { label: "Old", className: "bg-slate-100 text-slate-600" };
+  if (days <= 3) return { label: days === 1 ? "1 day" : `${days} days`, className: "bg-blue-50 text-blue-700" };
+  if (days <= 7) return { label: `${days} days`, className: "bg-amber-50 text-amber-700" };
+  return { label: `${days} days`, className: "bg-slate-100 text-slate-600" };
 };
 
 export default function LeadsPage() {
@@ -69,7 +74,14 @@ export default function LeadsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const result = await listLeads({ page, limit: 20, search: debouncedSearch, ...filters });
+      const result = await listLeads({
+        page,
+        limit: 20,
+        search: debouncedSearch,
+        ...filters,
+        createdFrom: dateBoundaryIso(filters.createdFrom),
+        createdTo: dateBoundaryIso(filters.createdTo, true),
+      });
       const rows = Array.isArray(result) ? result : result.data ?? [];
       setLeads([...rows].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setMeta(Array.isArray(result) ? { page: 1, limit: result.length, total: result.length, pages: result.length ? 1 : 0 } : result.meta ?? { page, limit: 20, total: 0, pages: 0 });
