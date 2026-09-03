@@ -74,6 +74,10 @@ export default function LeadDetailPage({ params }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+  useEffect(() => {
+    window.addEventListener("lms:data-invalidated", load);
+    return () => window.removeEventListener("lms:data-invalidated", load);
+  }, [load]);
 
   async function mutate(action) { try { await action(); await load(); } catch (err) { setError(err.message || "Could not update lead"); } }
   if (error && !lead) return <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}<button onClick={() => router.push("/leads")} className="ml-3 font-semibold underline">Back to leads</button></div>;

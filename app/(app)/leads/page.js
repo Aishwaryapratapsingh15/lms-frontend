@@ -81,6 +81,14 @@ export default function LeadsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+  useEffect(() => {
+    function refreshData() {
+      load();
+      if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES))).catch(() => {});
+    }
+    window.addEventListener("lms:data-invalidated", refreshData);
+    return () => window.removeEventListener("lms:data-invalidated", refreshData);
+  }, [load, hasFullAccess]);
   function changeFilter(key, value) { setFilters((prev) => ({ ...prev, [key]: value })); setPage(1); }
   function changeAge(value) { setAge(value); setFilters((prev) => ({ ...prev, ...ageRange(value) })); setPage(1); }
   async function handleCreate(payload) { await createLead(payload); setShowForm(false); await load(); }
