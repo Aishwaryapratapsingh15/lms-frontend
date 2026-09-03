@@ -53,7 +53,7 @@ export default function UsersPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-[28px]">Team members</h1>
-            <p className="mt-1 text-sm text-slate-500">Manage access, roles and lead ownership across your team.</p>
+            <p className="mt-1 text-sm text-slate-500">Manage access, roles and lead assignments across your team.</p>
           </div>
 
           <button

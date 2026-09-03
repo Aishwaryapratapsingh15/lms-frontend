@@ -20,11 +20,12 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
     e.preventDefault(); setError(""); setDuplicate(null); setSubmitting(true);
     try {
       let payload = { ...form };
-      if (!payload.assignedToId) delete payload.assignedToId;
       if (editing) {
-        const editable = ["fullName", "email", "phone", "company", "source", "priority", "notes"];
+        const editable = ["fullName", "email", "phone", "company", "source", "priority", "notes", ...(showAssignee ? ["assignedToId"] : [])];
         payload = Object.fromEntries(editable.filter((key) => form[key] !== initial[key]).map((key) => [key, form[key]]));
         if (!Object.keys(payload).length) { setError("No changes to save"); return; }
+      } else if (!payload.assignedToId) {
+        delete payload.assignedToId;
       }
       await onSubmit(payload);
     } catch (err) {
@@ -45,7 +46,7 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
       {!editing && <div><label className="mb-1 block text-sm font-medium text-slate-700">Status</label><select className={FIELD_CLASS} value={form.status} onChange={(e) => update("status", e.target.value)}>{LEAD_STATUSES.map((v) => <option key={v}>{v}</option>)}</select></div>}
       <div><label className="mb-1 block text-sm font-medium text-slate-700">Priority</label><select className={FIELD_CLASS} value={form.priority} onChange={(e) => update("priority", e.target.value)}>{LEAD_PRIORITIES.map((v) => <option key={v}>{v}</option>)}</select></div>
     </div>
-    {showAssignee && !editing && <div><label className="mb-1 block text-sm font-medium text-slate-700">Assign to (Sales)</label><select className={FIELD_CLASS} value={form.assignedToId} onChange={(e) => update("assignedToId", e.target.value)}><option value="">Unassigned</option>{salesUsers.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}</select></div>}
+    {showAssignee && <div><label className="mb-1 block text-sm font-medium text-slate-700">Assigned to</label><select className={FIELD_CLASS} value={form.assignedToId} onChange={(e) => update("assignedToId", e.target.value)}><option value="">Unassigned</option>{salesUsers.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}</select></div>}
     <div><label className="mb-1 block text-sm font-medium text-slate-700">Notes</label><textarea rows={3} className={`${FIELD_CLASS} h-auto py-2.5`} value={form.notes ?? ""} onChange={(e) => update("notes", e.target.value)} /></div>
     {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"><p>{error}</p>{duplicate?.id && <Link href={`/leads/${duplicate.id}`} className="mt-1 inline-block font-semibold underline">Open existing lead{duplicate.fullName ? `: ${duplicate.fullName}` : ""}</Link>}</div>}
     <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onCancel} className="h-10 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button><button type="submit" disabled={submitting} className="h-10 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60">{submitting ? "Saving…" : editing ? "Save changes" : "Create lead"}</button></div>
