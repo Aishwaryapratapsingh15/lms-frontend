@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import RichTextEditor from "./RichTextEditor";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100";
@@ -19,10 +20,15 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const editorRef = useRef(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    if (editorRef.current?.isEmpty()) {
+      setError("Message is required");
+      return;
+    }
     setSubmitting(true);
     try {
       await onSubmit({
@@ -34,6 +40,7 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
       });
       setSubject("");
       setBody("");
+      editorRef.current?.clear();
       setCcEmails("");
       setBccEmails("");
     } catch (err) {
@@ -88,13 +95,7 @@ export default function EmailForm({ defaultToEmail, onSubmit }) {
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Message *</label>
-        <textarea
-          required
-          rows={4}
-          className={FIELD_CLASS}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-        />
+        <RichTextEditor ref={editorRef} onChange={setBody} />
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
