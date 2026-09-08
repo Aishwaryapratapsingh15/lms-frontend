@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { listReminders } from "@/lib/api/leads";
+import { listReminders, getUnreadReminderCount, markRemindersSeen } from "@/lib/api/leads";
 import { ROLE_LABELS } from "@/lib/constants";
 import { LINKS } from "@/components/Sidebar";
 import Icon from "@/components/Icons";
@@ -20,18 +20,31 @@ export default function Topbar() {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const loadNotifications = useCallback(async () => {
     setNotificationsLoading(true);
     setNotificationsError("");
     try {
       const data = await listReminders("all", 6);
-      setNotifications(Array.isArray(data) ? data : data?.data ?? data?.reminders ?? []);
+      const items = Array.isArray(data) ? data : data?.data ?? data?.reminders ?? [];
+      setNotifications(items);
+      const unseenIds = items.filter((item) => !item.seenAt).map((item) => item.id);
+      if (unseenIds.length) {
+        await markRemindersSeen(unseenIds);
+        setUnreadCount((count) => Math.max(0, count - unseenIds.length));
+      }
     } catch (error) {
       setNotificationsError(error.message || "Could not load notifications");
     } finally {
       setNotificationsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    getUnreadReminderCount()
+      .then((data) => setUnreadCount(data?.count ?? 0))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -66,7 +79,7 @@ export default function Topbar() {
     <div className="relative hidden w-full max-w-md lg:block"><Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-14 text-[13px] text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="Search leads, companies or team members" /><kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">⌘ K</kbd></div>
     <div className="flex items-center gap-2">
       <div ref={notificationsRef} className="relative">
-        <button type="button" onClick={toggleNotifications} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notifications-panel" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${notificationsOpen ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}><Icon name="bell" size={18} />{notifications.length > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white ring-2 ring-white">{notifications.length > 9 ? "9+" : notifications.length}</span>}</button>
+        <button type="button" onClick={toggleNotifications} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notifications-panel" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${notificationsOpen ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}><Icon name="bell" size={18} />{unreadCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white ring-2 ring-white">{unreadCount > 9 ? "9+" : unreadCount}</span>}</button>
         {notificationsOpen && <div id="notifications-panel" className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><p className="text-sm font-semibold text-slate-900">Notifications</p><p className="text-[11px] text-slate-500">Your follow-up reminders</p></div><button type="button" onClick={loadNotifications} disabled={notificationsLoading} className="text-[11px] font-semibold text-blue-600 disabled:opacity-50">Refresh</button></div>
           <div className="max-h-80 overflow-y-auto">

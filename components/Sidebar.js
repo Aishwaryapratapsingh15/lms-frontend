@@ -11,6 +11,7 @@ export const LINKS = [
   { href: "/reminders", label: "Reminders", icon: "calendar" },
   { href: "/calendar", label: "Team calendar", icon: "calendar" },
   { href: "/form-submissions", label: "General enquiries", icon: "mail", fullAccessOnly: true },
+  { href: "/vendor-events", label: "Vendor events", icon: "building" },
   { href: "/users", label: "Team members", icon: "users", fullAccessOnly: true },
   { href: "/settings", label: "Security", icon: "target" },
 ];
