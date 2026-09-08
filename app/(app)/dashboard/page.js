@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getDashboard } from "@/lib/api/leads";
 
-const CARDS = [["total","Total leads"],["assigned","Assigned"],["unassigned","Unassigned"],["won","Deals won"],["conversionRate","Conversion rate"],["overdueFollowUps","Overdue follow-ups"],["callsLogged","Calls attempted"],["meetingsLogged","Customer meetings"]];
+const CARDS = [["total","Total leads"],["assigned","Assigned"],["unassigned","Unassigned"],["won","Deals won"],["conversionRate","Conversion rate"],["overdueFollowUps","Overdue follow-ups"],["callsLogged","Calls attempted"],["meetingsLogged","Customer meetings"],["followUpsLogged","Follow-ups logged"]];
 const COLORS = ["bg-blue-500","bg-cyan-500","bg-violet-500","bg-emerald-500","bg-amber-500","bg-rose-500"];
 function Chart({ title, values = {} }) {
   const entries = Object.entries(values);

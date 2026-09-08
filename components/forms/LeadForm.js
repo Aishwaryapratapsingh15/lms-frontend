@@ -5,10 +5,10 @@ import { useMemo, useState } from "react";
 import { LEAD_SOURCES, LEAD_PRIORITIES, LEAD_STATUSES, LEAD_TYPES } from "@/lib/constants";
 
 const FIELD_CLASS = "h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100";
-const EMPTY = { fullName: "", email: "", phone: "", company: "", city: "", state: "", source: LEAD_SOURCES[0], leadType: "", status: "NEW", priority: "MEDIUM", product: "", quantity: "", productDescription: "", notes: "", assignedToId: "" };
+const EMPTY = { fullName: "", email: "", phone: "", company: "", city: "", state: "", source: LEAD_SOURCES[0], leadType: "", status: "NEW", priority: "MEDIUM", product: "", quantity: "", productDescription: "", spokenOn: "", notes: "", assignedToId: "" };
 
 export default function LeadForm({ salesUsers = [], showAssignee, initialValues, onSubmit, onCancel }) {
-  const initial = useMemo(() => ({ ...EMPTY, ...initialValues, leadType: initialValues?.leadType ?? "", assignedToId: initialValues?.assignedTo?.id ?? initialValues?.assignedToId ?? "" }), [initialValues]);
+  const initial = useMemo(() => ({ ...EMPTY, ...initialValues, leadType: initialValues?.leadType ?? "", spokenOn: initialValues?.spokenOn ? initialValues.spokenOn.slice(0, 10) : "", assignedToId: initialValues?.assignedTo?.id ?? initialValues?.assignedToId ?? "" }), [initialValues]);
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState(null);
@@ -21,7 +21,7 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
     try {
       let payload = { ...form, quantity: form.quantity === "" ? "" : Number(form.quantity) };
       if (editing) {
-        const editable = ["fullName", "email", "phone", "company", "city", "state", "source", "leadType", "priority", "product", "quantity", "productDescription", "notes", ...(showAssignee ? ["assignedToId"] : [])];
+        const editable = ["fullName", "email", "phone", "company", "city", "state", "source", "leadType", "priority", "product", "quantity", "productDescription", "spokenOn", "notes", ...(showAssignee ? ["assignedToId"] : [])];
         payload = Object.fromEntries(editable.filter((key) => payload[key] !== initial[key]).map((key) => [key, payload[key] === "" ? null : payload[key]]));
         if (!Object.keys(payload).length) { setError("No changes to save"); return; }
       } else {
@@ -52,6 +52,7 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
       <div><label className="mb-1 block text-sm font-medium text-slate-700">Quantity</label><input type="number" min="1" className={FIELD_CLASS} value={form.quantity ?? ""} onChange={(e) => update("quantity", e.target.value)} /></div>
     </div>
     <div><label className="mb-1 block text-sm font-medium text-slate-700">Product description</label><input className={FIELD_CLASS} value={form.productDescription ?? ""} onChange={(e) => update("productDescription", e.target.value)} /></div>
+    <div><label className="mb-1 block text-sm font-medium text-slate-700">Spoken on</label><input type="date" className={FIELD_CLASS} value={form.spokenOn ?? ""} onChange={(e) => update("spokenOn", e.target.value)} /></div>
     <div className="grid grid-cols-3 gap-3">
       <div><label className="mb-1 block text-sm font-medium text-slate-700">Source</label><select className={FIELD_CLASS} value={form.source} onChange={(e) => update("source", e.target.value)}>{LEAD_SOURCES.map((v) => <option key={v}>{v}</option>)}</select></div>
       {!editing && <div><label className="mb-1 block text-sm font-medium text-slate-700">Status</label><select className={FIELD_CLASS} value={form.status} onChange={(e) => update("status", e.target.value)}>{LEAD_STATUSES.map((v) => <option key={v}>{v}</option>)}</select></div>}

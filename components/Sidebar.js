@@ -8,6 +8,7 @@ import Icon from "@/components/Icons";
 export const LINKS = [
   { href: "/dashboard", label: "Overview", icon: "dashboard" },
   { href: "/leads", label: "Leads", icon: "leads" },
+  { href: "/prospects", label: "Prospects", icon: "target" },
   { href: "/reminders", label: "Reminders", icon: "calendar" },
   { href: "/calendar", label: "Team calendar", icon: "calendar" },
   { href: "/form-submissions", label: "General enquiries", icon: "mail", fullAccessOnly: true },

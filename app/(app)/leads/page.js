@@ -36,6 +36,11 @@ const ageRange = (age) => {
   if (age === "old") return { createdFrom: "", createdTo: dayOffset(8) };
   return { createdFrom: "", createdTo: "" };
 };
+const monthRange = (value) => {
+  if (!value) return { createdFrom: "", createdTo: "" };
+  const [year, month] = value.split("-").map(Number);
+  return { createdFrom: toDateInputValue(new Date(year, month - 1, 1)), createdTo: toDateInputValue(new Date(year, month, 0)) };
+};
 const dateBoundaryIso = (dateValue, endOfDay = false) => {
   if (!dateValue) return "";
   const [year, month, day] = dateValue.split("-").map(Number);
@@ -63,6 +68,7 @@ export default function LeadsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [age, setAge] = useState("");
+  const [month, setMonth] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -102,7 +108,8 @@ export default function LeadsPage() {
     return () => window.removeEventListener("lms:data-invalidated", refreshData);
   }, [load, hasFullAccess]);
   function changeFilter(key, value) { setFilters((prev) => ({ ...prev, [key]: value })); setPage(1); }
-  function changeAge(value) { setAge(value); setFilters((prev) => ({ ...prev, ...ageRange(value) })); setPage(1); }
+  function changeAge(value) { setAge(value); setMonth(""); setFilters((prev) => ({ ...prev, ...ageRange(value) })); setPage(1); }
+  function changeMonth(value) { setMonth(value); setAge(""); setFilters((prev) => ({ ...prev, ...monthRange(value) })); setPage(1); }
   async function handleCreate(payload) { await createLead(payload); setShowForm(false); await load(); }
   async function toggleArchive(lead) { try { await (isArchived(lead) ? restoreLead(lead.id) : archiveLead(lead.id)); await load(); } catch (err) { setError(err.message || "Could not update archive status"); } }
 
@@ -115,7 +122,7 @@ export default function LeadsPage() {
         <select value={filters.source} onChange={(e) => changeFilter("source", e.target.value)} className={INPUT}><option value="">All sources</option>{LEAD_SOURCES.map((v) => <option key={v}>{v}</option>)}</select>
         <select value={filters.leadType} onChange={(e) => changeFilter("leadType", e.target.value)} className={INPUT}><option value="">All lead types</option>{LEAD_TYPES.map((v) => <option key={v} value={v}>{v === "INTERNAL" ? "Internal" : "External"}</option>)}</select>
       </div>
-      <div className="flex flex-wrap items-center gap-2">{hasFullAccess && <select value={filters.assignedToId} onChange={(e) => changeFilter("assignedToId", e.target.value)} className={INPUT}><option value="">All salespeople</option>{salesUsers.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}</select>}{hasFullAccess && <select value={filters.archived} onChange={(e) => changeFilter("archived", e.target.value)} className={INPUT}><option value="active">Active</option><option value="archived">Archived</option><option value="all">Active + archived</option></select>}<select value={age} onChange={(e) => changeAge(e.target.value)} className={INPUT}><option value="">All ages</option><option value="new">New</option><option value="3-days">3 days</option><option value="7-days">7 days</option><option value="old">Old</option></select><label className="flex items-center gap-2 text-xs text-slate-500">Created<input type="date" value={filters.createdFrom} onChange={(e) => { setAge(""); changeFilter("createdFrom", e.target.value); }} className={INPUT}/><span>to</span><input type="date" value={filters.createdTo} onChange={(e) => { setAge(""); changeFilter("createdTo", e.target.value); }} className={INPUT}/></label><button onClick={() => { setFilters(INITIAL_FILTERS); setAge(""); setSearch(""); setPage(1); }} className="h-9 px-2 text-xs font-semibold text-blue-600">Clear filters</button><span className="ml-auto text-xs font-medium text-slate-500">{meta.total} records</span></div>
+      <div className="flex flex-wrap items-center gap-2">{hasFullAccess && <select value={filters.assignedToId} onChange={(e) => changeFilter("assignedToId", e.target.value)} className={INPUT}><option value="">All salespeople</option>{salesUsers.map((u) => <option key={u.id} value={u.id}>{u.name ?? u.email}</option>)}</select>}{hasFullAccess && <select value={filters.archived} onChange={(e) => changeFilter("archived", e.target.value)} className={INPUT}><option value="active">Active</option><option value="archived">Archived</option><option value="all">Active + archived</option></select>}<select value={age} onChange={(e) => changeAge(e.target.value)} className={INPUT}><option value="">All ages</option><option value="new">New</option><option value="3-days">3 days</option><option value="7-days">7 days</option><option value="old">Old</option></select><label className="flex items-center gap-2 text-xs text-slate-500">Month<input type="month" value={month} onChange={(e) => changeMonth(e.target.value)} className={INPUT}/></label><label className="flex items-center gap-2 text-xs text-slate-500">Created<input type="date" value={filters.createdFrom} onChange={(e) => { setAge(""); setMonth(""); changeFilter("createdFrom", e.target.value); }} className={INPUT}/><span>to</span><input type="date" value={filters.createdTo} onChange={(e) => { setAge(""); setMonth(""); changeFilter("createdTo", e.target.value); }} className={INPUT}/></label><button onClick={() => { setFilters(INITIAL_FILTERS); setAge(""); setMonth(""); setSearch(""); setPage(1); }} className="h-9 px-2 text-xs font-semibold text-blue-600">Clear filters</button><span className="ml-auto text-xs font-medium text-slate-500">{meta.total} records</span></div>
     </section>
 
     {error && <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
