@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import { getCalendarEvents } from "@/lib/api/leads";
@@ -27,16 +27,26 @@ export default function CalendarPage() {
   const [error, setError] = useState("");
 
   const days = useMemo(() => buildMonthGrid(monthDate), [monthDate]);
+  // Guards against rapid month navigation: an older month's fetch can
+  // resolve after a newer one (e.g. double-clicking "Next"), and without
+  // this it would silently overwrite the grid with the wrong month's data.
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true); setError("");
     try {
       const from = days[0];
       const to = new Date(days[days.length - 1]); to.setDate(to.getDate() + 1);
       const data = await getCalendarEvents(from.toISOString(), to.toISOString());
+      if (requestIdRef.current !== requestId) return;
       setEvents(Array.isArray(data) ? data : data?.data ?? []);
-    } catch (err) { setError(err.message || "Failed to load calendar"); }
-    finally { setLoading(false); }
+    } catch (err) {
+      if (requestIdRef.current !== requestId) return;
+      setError(err.message || "Failed to load calendar");
+    } finally {
+      if (requestIdRef.current === requestId) setLoading(false);
+    }
   }, [days]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

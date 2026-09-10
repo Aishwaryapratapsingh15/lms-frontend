@@ -1,19 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
 import Icon from "@/components/Icons";
 
+// Only ever redirect back to a same-site relative path — a `next` value
+// pulled straight from the URL must never be handed to router.replace()
+// unvalidated, or it becomes an open-redirect vector (e.g. next=//evil.com).
+function safeNextPath(next) {
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+  return next;
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  async function handleSubmit(e) { e.preventDefault(); setError(""); setSubmitting(true); try { await login(email, password); router.replace("/dashboard"); } catch (err) { setError(err.message || "Login failed. Check your credentials."); } finally { setSubmitting(false); } }
+  async function handleSubmit(e) { e.preventDefault(); setError(""); setSubmitting(true); try { await login(email, password); router.replace(safeNextPath(searchParams.get("next"))); } catch (err) { setError(err.message || "Login failed. Check your credentials."); } finally { setSubmitting(false); } }
 
   return <main className="grid min-h-screen bg-white lg:grid-cols-[minmax(0,1fr)_560px]">
     <section className="relative hidden overflow-hidden bg-[#f3f6fb] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
@@ -32,7 +41,6 @@ export default function LoginPage() {
           <div><label htmlFor="email" className="mb-2 block text-xs font-semibold text-slate-700">Email address</label><div className="relative"><Icon name="mail" size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/><input id="email" type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="you@company.com"/></div></div>
           <div><div className="mb-2 flex items-center justify-between"><label htmlFor="password" className="text-xs font-semibold text-slate-700">Password</label><Link href="/forgot-password" className="text-[11px] font-semibold text-blue-600 hover:text-blue-700">Forgot password?</Link></div><input id="password" type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="Enter your password"/></div>
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
-          <label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" className="h-4 w-4 rounded border-slate-300 accent-blue-600"/>Remember me on this device</label>
           <button type="submit" disabled={submitting} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60">{submitting ? "Signing in…" : "Sign in"}{!submitting && <Icon name="arrowRight" size={16}/>}</button>
         </form>
         <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-slate-400"><span>Protected with enterprise-grade security</span></div>

@@ -21,7 +21,7 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
     try {
       let payload = { ...form, quantity: form.quantity === "" ? "" : Number(form.quantity) };
       if (editing) {
-        const editable = ["fullName", "email", "phone", "company", "city", "state", "source", "leadType", "priority", "product", "quantity", "productDescription", "spokenOn", "notes", ...(showAssignee ? ["assignedToId"] : [])];
+        const editable = ["fullName", "email", "phone", "company", "city", "state", "source", "leadType", "priority", "product", "productDescription", "spokenOn", "notes", ...(showAssignee ? ["assignedToId"] : [])];
         payload = Object.fromEntries(editable.filter((key) => payload[key] !== initial[key]).map((key) => [key, payload[key] === "" ? null : payload[key]]));
         if (!Object.keys(payload).length) { setError("No changes to save"); return; }
       } else {
@@ -30,7 +30,7 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
       }
       await onSubmit(payload);
     } catch (err) {
-      if (err.status === 409) setDuplicate(err.data?.lead ?? err.data?.duplicateLead ?? err.data);
+      if (err.status === 409) setDuplicate(err.data?.duplicate);
       setError(err.message || `Failed to ${editing ? "update" : "create"} lead`);
     } finally { setSubmitting(false); }
   }
@@ -47,9 +47,9 @@ export default function LeadForm({ salesUsers = [], showAssignee, initialValues,
       <div><label className="mb-1 block text-sm font-medium text-slate-700">State</label><input className={FIELD_CLASS} value={form.state ?? ""} onChange={(e) => update("state", e.target.value)} /></div>
     </div>
     <div><label className="mb-1 block text-sm font-medium text-slate-700">Lead type *</label><select required className={FIELD_CLASS} value={form.leadType} onChange={(e) => update("leadType", e.target.value)}><option value="" disabled>Select lead type</option>{LEAD_TYPES.map((v) => <option key={v} value={v}>{v === "INTERNAL" ? "Internal" : "External"}</option>)}</select></div>
-    <div className="grid grid-cols-3 gap-3">
-      <div className="col-span-2"><label className="mb-1 block text-sm font-medium text-slate-700">Product</label><input className={FIELD_CLASS} value={form.product ?? ""} onChange={(e) => update("product", e.target.value)} /></div>
-      <div><label className="mb-1 block text-sm font-medium text-slate-700">Quantity</label><input type="number" min="1" className={FIELD_CLASS} value={form.quantity ?? ""} onChange={(e) => update("quantity", e.target.value)} /></div>
+    <div className={editing ? "" : "grid grid-cols-3 gap-3"}>
+      <div className={editing ? "" : "col-span-2"}><label className="mb-1 block text-sm font-medium text-slate-700">Product</label><input className={FIELD_CLASS} value={form.product ?? ""} onChange={(e) => update("product", e.target.value)} /></div>
+      {!editing && <div><label className="mb-1 block text-sm font-medium text-slate-700">Quantity</label><input type="number" min="1" className={FIELD_CLASS} value={form.quantity ?? ""} onChange={(e) => update("quantity", e.target.value)} /></div>}
     </div>
     <div><label className="mb-1 block text-sm font-medium text-slate-700">Product description</label><input className={FIELD_CLASS} value={form.productDescription ?? ""} onChange={(e) => update("productDescription", e.target.value)} /></div>
     <div><label className="mb-1 block text-sm font-medium text-slate-700">Spoken on</label><input type="date" className={FIELD_CLASS} value={form.spokenOn ?? ""} onChange={(e) => update("spokenOn", e.target.value)} /></div>

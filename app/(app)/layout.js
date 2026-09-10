@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -9,10 +9,16 @@ import Topbar from "@/components/Topbar";
 export default function AppLayout({ children }) {
   const { status } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (status === "unauthenticated") router.replace("/login");
-  }, [status, router]);
+    if (status === "unauthenticated") {
+      const query = searchParams.toString();
+      const current = query ? `${pathname}?${query}` : pathname;
+      router.replace(`/login?next=${encodeURIComponent(current)}`);
+    }
+  }, [status, router, pathname, searchParams]);
 
   if (status !== "authenticated") {
     return (
