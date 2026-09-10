@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
@@ -9,16 +9,18 @@ import Topbar from "@/components/Topbar";
 export default function AppLayout({ children }) {
   const { status } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      const query = searchParams.toString();
-      const current = query ? `${pathname}?${query}` : pathname;
+      // Read the current URL directly instead of next/navigation's
+      // usePathname()/useSearchParams() — this only ever runs client-side
+      // post-mount, so there's no need to pull those hooks (and their
+      // Suspense-boundary requirement for static prerendering) into a
+      // layout that wraps every page in the app.
+      const current = window.location.pathname + window.location.search;
       router.replace(`/login?next=${encodeURIComponent(current)}`);
     }
-  }, [status, router, pathname, searchParams]);
+  }, [status, router]);
 
   if (status !== "authenticated") {
     return (
