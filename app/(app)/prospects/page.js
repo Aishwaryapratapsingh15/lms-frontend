@@ -36,7 +36,7 @@ export default function ProspectsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => { const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1); }, 350); return () => clearTimeout(timer); }, [search]);
-  useEffect(() => { if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES))).catch(() => {}); }, [hasFullAccess]);
+  useEffect(() => { if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES || u.role === ROLES.ADMIN))).catch(() => {}); }, [hasFullAccess]);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");

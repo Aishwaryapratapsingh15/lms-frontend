@@ -81,7 +81,7 @@ export default function LeadDetailPage({ params }) {
       const [leadData, timelineData, userData] = await Promise.all([getLead(id), getLeadTimeline(id), hasFullAccess ? listUsers() : Promise.resolve([])]);
       setLead(leadData);
       setTimeline(Array.isArray(timelineData) ? timelineData : timelineData?.data ?? timelineData?.timeline ?? []);
-      setSalesUsers(userData.filter((u) => u.role === ROLES.SALES));
+      setSalesUsers(userData.filter((u) => u.role === ROLES.SALES || u.role === ROLES.ADMIN));
     } catch (err) { setError(err.status === 404 ? "This lead was not found or is not accessible to you." : err.status === 403 ? "You do not have permission to access this lead." : err.message || "Failed to load lead"); }
   }, [id, hasFullAccess]);
   useEffect(() => {

@@ -75,7 +75,7 @@ export default function LeadsPage() {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => { const timer = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1); }, 350); return () => clearTimeout(timer); }, [search]);
-  useEffect(() => { if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES))).catch(() => {}); }, [hasFullAccess]);
+  useEffect(() => { if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES || u.role === ROLES.ADMIN))).catch(() => {}); }, [hasFullAccess]);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -102,7 +102,7 @@ export default function LeadsPage() {
   useEffect(() => {
     function refreshData() {
       load();
-      if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES))).catch(() => {});
+      if (hasFullAccess) listUsers().then((rows) => setSalesUsers(rows.filter((u) => u.role === ROLES.SALES || u.role === ROLES.ADMIN))).catch(() => {});
     }
     window.addEventListener("lms:data-invalidated", refreshData);
     return () => window.removeEventListener("lms:data-invalidated", refreshData);
