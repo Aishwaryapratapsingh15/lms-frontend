@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
-import { listReminders, getUnreadReminderCount, markRemindersSeen } from "@/lib/api/leads";
+import { listReminders, getUnreadReminderCount, markRemindersSeen, listLeads } from "@/lib/api/leads";
+import { listUsers } from "@/lib/api/users";
 import { ROLE_LABELS } from "@/lib/constants";
 import { LINKS } from "@/components/Sidebar";
 import Icon from "@/components/Icons";
@@ -21,6 +22,16 @@ export default function Topbar() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const searchRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const searchRequestIdRef = useRef(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLeads, setSearchLeads] = useState([]);
+  const [searchTeam, setSearchTeam] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const loadNotifications = useCallback(async () => {
     setNotificationsLoading(true);
@@ -69,6 +80,76 @@ export default function Topbar() {
     if (nextOpen) await loadNotifications();
   }
 
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSearchLeads([]);
+      setSearchTeam([]);
+      setSearchLoading(false);
+      setSearchError("");
+      return;
+    }
+    const requestId = ++searchRequestIdRef.current;
+    setSearchLoading(true);
+    setSearchError("");
+    const timer = setTimeout(async () => {
+      try {
+        const [leadsResult, usersResult] = await Promise.all([
+          listLeads({ search: trimmed, limit: 5, prospect: "all" }),
+          hasFullAccess ? listUsers(trimmed) : Promise.resolve([]),
+        ]);
+        if (requestId !== searchRequestIdRef.current) return;
+        const leadRows = Array.isArray(leadsResult) ? leadsResult : leadsResult?.data ?? [];
+        setSearchLeads(leadRows.slice(0, 5));
+        setSearchTeam((usersResult ?? []).slice(0, 5));
+      } catch (error) {
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchError(error.message || "Search failed");
+      } finally {
+        if (requestId === searchRequestIdRef.current) setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, hasFullAccess]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    function closeOnOutsideClick(event) {
+      if (!searchRef.current?.contains(event.target)) setSearchOpen(false);
+    }
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setSearchOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [searchOpen]);
+
+  useEffect(() => {
+    function focusOnShortcut(event) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener("keydown", focusOnShortcut);
+    return () => document.removeEventListener("keydown", focusOnShortcut);
+  }, []);
+
+  function goToSearchResult(path) {
+    setSearchOpen(false);
+    setSearchQuery("");
+    router.push(path);
+  }
+
+  const showSearchResults = searchOpen && searchQuery.trim().length > 0;
+  const hasSearchResults = searchLeads.length > 0 || searchTeam.length > 0;
+
   async function handleLogout() {
     await logout();
     router.replace("/login");
@@ -76,7 +157,35 @@ export default function Topbar() {
 
   return <><header className="sticky top-0 z-30 h-[72px] border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md md:px-7"><div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-4">
     <div className="flex items-center gap-3 lg:hidden"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">EI</div><div className="hidden sm:block"><p className="text-sm font-semibold text-slate-900">EICE LeadFlow</p><p className="text-[10px] text-slate-500">Sales workspace</p></div></div>
-    <div className="relative hidden w-full max-w-md lg:block"><Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" /><input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-14 text-[13px] text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100" placeholder="Search leads, companies or team members" /><kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">⌘ K</kbd></div>
+    <div ref={searchRef} className="relative hidden w-full max-w-md lg:block">
+      <Icon name="search" size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+      <input
+        ref={searchInputRef}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onFocus={() => setSearchOpen(true)}
+        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-14 text-[13px] text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-3 focus:ring-blue-100"
+        placeholder="Search leads, companies or team members"
+      />
+      {!searchQuery && <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">⌘ K</kbd>}
+      {showSearchResults && <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+        <div className="max-h-96 overflow-y-auto">
+          {searchLoading ? <p className="px-4 py-8 text-center text-xs text-slate-400">Searching…</p>
+            : searchError ? <p className="px-4 py-6 text-center text-xs text-red-600">{searchError}</p>
+            : !hasSearchResults ? <p className="px-4 py-8 text-center text-xs text-slate-500">No matches for &quot;{searchQuery.trim()}&quot;.</p>
+            : <>
+              {searchLeads.length > 0 && <div>
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Leads</p>
+                <ul>{searchLeads.map((lead) => <li key={lead.id}><button type="button" onClick={() => goToSearchResult(`/leads/${lead.id}`)} className="block w-full px-4 py-2.5 text-left transition hover:bg-blue-50/50"><p className="truncate text-xs font-semibold text-slate-800">{lead.fullName}</p><p className="mt-0.5 truncate text-[11px] text-slate-500">{lead.company || lead.email || "No company"}</p></button></li>)}</ul>
+              </div>}
+              {searchTeam.length > 0 && <div>
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Team members</p>
+                <ul>{searchTeam.map((member) => <li key={member.id}><button type="button" onClick={() => goToSearchResult("/users")} className="block w-full px-4 py-2.5 text-left transition hover:bg-blue-50/50"><p className="truncate text-xs font-semibold text-slate-800">{member.name ?? member.email}</p><p className="mt-0.5 truncate text-[11px] text-slate-500">{ROLE_LABELS[member.role] ?? member.role}</p></button></li>)}</ul>
+              </div>}
+            </>}
+        </div>
+      </div>}
+    </div>
     <div className="flex items-center gap-2">
       <div ref={notificationsRef} className="relative">
         <button type="button" onClick={toggleNotifications} aria-label="Notifications" aria-expanded={notificationsOpen} aria-controls="notifications-panel" className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition ${notificationsOpen ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"}`}><Icon name="bell" size={18} />{unreadCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white ring-2 ring-white">{unreadCount > 9 ? "9+" : unreadCount}</span>}</button>
